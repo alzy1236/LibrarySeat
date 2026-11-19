@@ -23,9 +23,14 @@ export default defineConfig({
     }
   },
   build: {
-    // 本地打包：输出到后端的 static 目录，SpringBoot 直接托管（start.bat 用这套）
-    // Vercel 等云平台：输出到标准 dist 目录，否则平台找不到产物会报 STATIC_BUILD_NO_OUT_DIR
-    outDir: process.env.VERCEL ? 'dist' : '../backend/src/main/resources/static',
+    // 本地打包：输出到后端 static 目录，SpringBoot 直接托管（start.bat / 打 jar 用这套）
+    // 云平台（Vercel / Cloudflare Pages / Netlify / 其它 CI）：输出到标准 dist 目录，
+    // 否则平台找不到产物，会报 STATIC_BUILD_NO_OUT_DIR 之类的错误
+    outDir: process.env.OUT_DIR || (
+      process.env.VERCEL || process.env.CF_PAGES || process.env.NETLIFY || process.env.CI
+        ? 'dist'
+        : '../backend/src/main/resources/static'
+    ),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1500
   }
