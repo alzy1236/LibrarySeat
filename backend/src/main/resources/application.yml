@@ -1,0 +1,87 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+  tomcat:
+    uri-encoding: UTF-8
+
+spring:
+  application:
+    name: library-seat
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/library_seat?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: 123456
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 15
+      connection-timeout: 30000
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  task:
+    scheduling:
+      pool:
+        size: 4
+      thread-name-prefix: schedule-
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.library.seat.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    # 调试时可改为 org.apache.ibatis.logging.stdout.StdOutImpl 输出完整 SQL
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 业务参数
+app:
+  jwt:
+    secret: LibrarySeatSystemJwtSecretKeyForGraduationProject2024!
+    # token 有效期（小时）
+    expire-hours: 12
+    header: Authorization
+    prefix: "Bearer "
+  # 长期自习室考核规则（可在系统参数 sys_config 中覆盖）
+  assessment:
+    min-days: 20
+  schedule:
+    # 长期自习室每月 1 号自动开放约（零点执行）
+    long-term-open-cron: "0 0 0 1 * ?"
+    # 每月 1 号 02:00 对上月长期座位进行签到签退考核
+    long-term-assess-cron: "0 0 2 1 * ?"
+    # 短期自习室超时检测（每日 00:05 检查前一日 24:00 未清场的记录）
+    short-clear-check-cron: "0 5 0 * * ?"
+    # 分钟级轮询：处理预约超时未签到等
+    minute-cron: "0 * * * * ?"
+
+logging:
+  # 控制台只保留简洁的启动 / 错误信息，业务日志写入文件（logs/library-seat.log）
+  level:
+    root: warn
+    com.library.seat: info
+    com.zaxxer.hikari: warn
+    org.mybatis: warn
+  pattern:
+    console: "%d{HH:mm:ss} %-5level %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/library-seat.log

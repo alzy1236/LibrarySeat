@@ -1,0 +1,81 @@
+-- =====================================================================
+--  演示数据补充：生成近 7 天预约与签到签退历史
+--  执行顺序：先 library_seat.sql，再执行本脚本
+--  说明：数据起始日期取“执行当天”，因此无论何时导入，图表都能看到最近一周数据。
+--
+--  自习楼座位分布：
+--      1 层 短期  room_id=1   seat 1-24
+--      2 层 短期  room_id=2   seat 25-48
+--      3 层 长期  room_id=3   seat 49-72   （固定座位 49/50/51）
+--      4 层 长期  room_id=4   seat 73-96   （固定座位 73/74）
+--      5 层 短期  room_id=5   seat 97-126
+-- =====================================================================
+USE library_seat;
+
+-- 清理可能存在的重复历史数据（仅操作 7 天前至 1 天前的记录）
+DELETE sr FROM seat_reservation sr
+WHERE sr.reserve_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND DATE_SUB(CURDATE(), INTERVAL 1 DAY);
+
+-- ---------------------------------------------------------------------
+-- 长期自习室（3 层 / 4 层）：持有固定座位的学生，过去 6 天按时签到签退
+--   用户 2(张伟,49) 3(王芳,50) 4(李娜,51) 5(刘洋,73) 6(陈静,74)
+--   其中 6(陈静) 部分日期只签到未签退，用于演示“考核不达标”场景
+-- ---------------------------------------------------------------------
+INSERT INTO seat_reservation (user_id, room_id, seat_id, reserve_date, status, check_in_time, check_out_time, overstay, create_time, update_time)
+SELECT u.uid, u.rid, u.sid, d.dt, 'LEFT',
+       TIMESTAMP(d.dt, u.ci_time),
+       IF(u.uid = 6 AND DAY(d.dt) % 3 = 0, NULL, TIMESTAMP(d.dt, u.co_time)),
+       0, TIMESTAMP(d.dt, '07:45:00'), TIMESTAMP(d.dt, IF(u.uid = 6 AND DAY(d.dt) % 3 = 0, '08:40:00', u.co_time))
+FROM (
+    SELECT 2 AS uid, 3 AS rid, 49 AS sid, '07:52:00' AS ci_time, '21:25:00' AS co_time UNION ALL
+    SELECT 3, 3, 50, '08:05:00', '21:40:00' UNION ALL
+    SELECT 4, 3, 51, '08:18:00', '22:05:00' UNION ALL
+    SELECT 5, 4, 73, '08:02:00', '21:15:00' UNION ALL
+    SELECT 6, 4, 74, '08:26:00', '21:50:00'
+) u
+CROSS JOIN (
+    SELECT DATE_SUB(CURDATE(), INTERVAL 6 DAY) AS dt UNION ALL
+    SELECT DATE_SUB(CURDATE(), INTERVAL 5 DAY) UNION ALL
+    SELECT DATE_SUB(CURDATE(), INTERVAL 4 DAY) UNION ALL
+    SELECT DATE_SUB(CURDATE(), INTERVAL 3 DAY) UNION ALL
+    SELECT DATE_SUB(CURDATE(), INTERVAL 2 DAY) UNION ALL
+    SELECT DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+) d;
+
+-- ---------------------------------------------------------------------
+-- 短期自习室（1 层 / 2 层 / 5 层）历史预约
+-- ---------------------------------------------------------------------
+INSERT INTO seat_reservation (user_id, room_id, seat_id, reserve_date, status, check_in_time, check_out_time, overstay, cancel_reason, create_time, update_time)
+VALUES
+-- 6 天前
+(9,  1,  1,  DATE_SUB(CURDATE(), INTERVAL 6 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '09:10:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '21:30:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '09:00:00'), NOW()),
+(10, 1,  2,  DATE_SUB(CURDATE(), INTERVAL 6 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '10:20:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '21:05:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '10:10:00'), NOW()),
+(11, 2,  25, DATE_SUB(CURDATE(), INTERVAL 6 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '14:05:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '22:10:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '13:50:00'), NOW()),
+(12, 5,  97, DATE_SUB(CURDATE(), INTERVAL 6 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '15:30:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '23:40:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 6 DAY), '15:20:00'), NOW()),
+-- 5 天前
+(13, 1,  3,  DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:40:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '21:35:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:30:00'), NOW()),
+(14, 1,  4,  DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'CANCELLED', NULL, NULL, 0, '学生主动取消', TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:00:00'), NOW()),
+(15, 5,  98, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '09:00:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '21:20:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:50:00'), NOW()),
+-- 4 天前
+(16, 2,  26, DATE_SUB(CURDATE(), INTERVAL 4 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '11:00:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '22:00:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '10:50:00'), NOW()),
+(17, 2,  27, DATE_SUB(CURDATE(), INTERVAL 4 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '13:10:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '21:10:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '13:00:00'), NOW()),
+(18, 5,  99, DATE_SUB(CURDATE(), INTERVAL 4 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '16:40:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '23:55:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 4 DAY), '16:30:00'), NOW()),
+-- 3 天前
+(19, 1,  5,  DATE_SUB(CURDATE(), INTERVAL 3 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '08:30:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '21:00:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '08:20:00'), NOW()),
+(20, 1,  6,  DATE_SUB(CURDATE(), INTERVAL 3 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '19:05:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '22:30:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '18:50:00'), NOW()),
+(9,  2,  28, DATE_SUB(CURDATE(), INTERVAL 3 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '10:40:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '21:45:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '10:30:00'), NOW()),
+-- 2 天前
+(10, 1,  7,  DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '08:15:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '21:15:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '08:05:00'), NOW()),
+(11, 2,  29, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'TIMEOUT', NULL, NULL, 0, '超过预约签到时间未签到', TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '09:30:00'), NOW()),
+(12, 5,  100, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'LEFT',  TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '17:30:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '23:30:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '17:20:00'), NOW()),
+-- 1 天前
+(13, 1,  8,  DATE_SUB(CURDATE(), INTERVAL 1 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:45:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '21:25:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:35:00'), NOW()),
+(14, 1,  9,  DATE_SUB(CURDATE(), INTERVAL 1 DAY), 'LEFT',   TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '12:20:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '22:20:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '12:10:00'), NOW()),
+(15, 5,  101, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 'LEFT',  TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:30:00'), TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '21:00:00'), 0, NULL, TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:20:00'), NOW()),
+(16, 2,  30, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 'CANCELLED', NULL, NULL, 0, '学生主动取消', TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:00:00'), NOW());
+
+SELECT NOW() AS loaded_at,
+       (SELECT COUNT(*) FROM seat_reservation) AS reservation_rows,
+       (SELECT COUNT(*) FROM seat_reservation WHERE reserve_date = CURDATE()) AS today_rows,
+       (SELECT COUNT(*) FROM long_term_seat WHERE status = 'PENDING') AS pending_applies,
+       (SELECT COUNT(*) FROM long_term_seat WHERE status = 'ACTIVE') AS active_bindings;

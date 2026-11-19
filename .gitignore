@@ -1,0 +1,41 @@
+# ===== Java / Maven =====
+backend/target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# ===== Node / Vue =====
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 说明：backend/src/main/resources/static/ 是前端构建产物，
+# 但保留在仓库里，这样别人 clone 后不装 node 也能直接跑起来。
+
+# ===== 日志 =====
+logs/
+*.log
+
+# ===== IDE / 系统 =====
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# ===== 临时文件 =====
+*.tmp
+*.bak
+*.swp
+~$*
+.attach_pid*
+
+# ===== 本机环境相关（不要提交）=====
+frontend/.env.local
+backend/src/main/resources/application-local.yml

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.seat.mapper.LongTermSeatMapper">
+
+    <select id="selectActiveList" resultType="com.library.seat.entity.LongTermSeat">
+        SELECT lt.*, u.real_name AS userName, u.student_no AS studentNo, u.college, u.phone,
+               r.name AS roomName, s.seat_no AS seatNo
+        FROM long_term_seat lt
+        LEFT JOIN sys_user u ON u.id = lt.user_id
+        LEFT JOIN study_room r ON r.id = lt.room_id
+        LEFT JOIN seat s ON s.id = lt.seat_id
+        WHERE lt.status = 'ACTIVE'
+        <if test="roomId != null">
+            AND lt.room_id = #{roomId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.student_no LIKE CONCAT('%', #{keyword}, '%')
+                 OR s.seat_no LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY lt.room_id, s.row_no, s.col_no
+    </select>
+
+    <!-- 待审核的固定座位申请 -->
+    <select id="selectPendingList" resultType="com.library.seat.entity.LongTermSeat">
+        SELECT lt.*, u.real_name AS userName, u.student_no AS studentNo, u.college, u.phone,
+               r.name AS roomName, s.seat_no AS seatNo
+        FROM long_term_seat lt
+        LEFT JOIN sys_user u ON u.id = lt.user_id
+        LEFT JOIN study_room r ON r.id = lt.room_id
+        LEFT JOIN seat s ON s.id = lt.seat_id
+        WHERE lt.status = 'PENDING'
+        <if test="roomId != null">
+            AND lt.room_id = #{roomId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.student_no LIKE CONCAT('%', #{keyword}, '%')
+                 OR s.seat_no LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY lt.apply_time ASC, lt.id ASC
+    </select>
+
+    <select id="selectActiveByUser" resultType="com.library.seat.entity.LongTermSeat">
+        SELECT lt.*, u.real_name AS userName, u.student_no AS studentNo, u.college, u.phone,
+               r.name AS roomName, s.seat_no AS seatNo
+        FROM long_term_seat lt
+        LEFT JOIN sys_user u ON u.id = lt.user_id
+        LEFT JOIN study_room r ON r.id = lt.room_id
+        LEFT JOIN seat s ON s.id = lt.seat_id
+        WHERE lt.status = 'ACTIVE' AND lt.user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveBySeat" resultType="com.library.seat.entity.LongTermSeat">
+        SELECT lt.*, u.real_name AS userName, u.student_no AS studentNo,
+               r.name AS roomName, s.seat_no AS seatNo
+        FROM long_term_seat lt
+        LEFT JOIN sys_user u ON u.id = lt.user_id
+        LEFT JOIN study_room r ON r.id = lt.room_id
+        LEFT JOIN seat s ON s.id = lt.seat_id
+        WHERE lt.status = 'ACTIVE' AND lt.seat_id = #{seatId}
+        LIMIT 1
+    </select>
+
+    <!-- 统计某个自习室下所有长期绑定学生在该时间段内的签到 / 签退天数 -->
+    <select id="countAttendanceByUser" resultType="java.util.Map">
+        SELECT lt.id AS bindId, lt.user_id AS userId, lt.room_id AS roomId, lt.seat_id AS seatId,
+               IFNULL(t.checkInDays, 0) AS checkInDays,
+               IFNULL(t.checkOutDays, 0) AS checkOutDays,
+               IFNULL(t.bothDays, 0) AS bothDays
+        FROM long_term_seat lt
+        LEFT JOIN (
+            SELECT sr.user_id,
+                   COUNT(DISTINCT CASE WHEN sr.check_in_time IS NOT NULL THEN sr.reserve_date END) AS checkInDays,
+                   COUNT(DISTINCT CASE WHEN sr.check_out_time IS NOT NULL THEN sr.reserve_date END) AS checkOutDays,
+                   COUNT(DISTINCT CASE WHEN sr.check_in_time IS NOT NULL AND sr.check_out_time IS NOT NULL THEN sr.reserve_date END) AS bothDays
+            FROM seat_reservation sr
+            WHERE sr.reserve_date BETWEEN #{startDate} AND #{endDate}
+              AND sr.room_id = #{roomId}
+            GROUP BY sr.user_id
+        ) t ON t.user_id = lt.user_id
+        WHERE lt.status = 'ACTIVE'
+        <if test="roomId != null">
+            AND lt.room_id = #{roomId}
+        </if>
+        ORDER BY lt.id
+    </select>
+
+</mapper>

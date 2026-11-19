@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.seat.mapper.SeatReservationMapper">
+
+    <sql id="detailColumns">
+        sr.id, sr.user_id AS userId, sr.room_id AS roomId, sr.seat_id AS seatId,
+        sr.reserve_date AS reserveDate, sr.status, sr.check_in_time AS checkInTime,
+        sr.check_out_time AS checkOutTime, sr.overstay, sr.cancel_reason AS cancelReason,
+        sr.create_time AS createTime, sr.update_time AS updateTime,
+        u.real_name AS userName, u.student_no AS studentNo, u.college,
+        r.name AS roomName, r.room_type AS roomType, s.seat_no AS seatNo
+    </sql>
+
+    <sql id="detailJoins">
+        FROM seat_reservation sr
+        LEFT JOIN sys_user u ON u.id = sr.user_id
+        LEFT JOIN study_room r ON r.id = sr.room_id
+        LEFT JOIN seat s ON s.id = sr.seat_id
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="query.userId != null">
+                AND sr.user_id = #{query.userId}
+            </if>
+            <if test="query.roomId != null">
+                AND sr.room_id = #{query.roomId}
+            </if>
+            <if test="query.roomType != null and query.roomType != ''">
+                AND r.room_type = #{query.roomType}
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND sr.status = #{query.status}
+            </if>
+            <if test="query.startDate != null">
+                AND sr.reserve_date &gt;= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND sr.reserve_date &lt;= #{query.endDate}
+            </if>
+            <if test="query.overstay != null">
+                AND sr.overstay = #{query.overstay}
+            </if>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (u.real_name LIKE CONCAT('%', #{query.keyword}, '%')
+                     OR u.student_no LIKE CONCAT('%', #{query.keyword}, '%')
+                     OR s.seat_no LIKE CONCAT('%', #{query.keyword}, '%')
+                     OR r.name LIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectReservationPage" resultType="com.library.seat.entity.SeatReservation">
+        SELECT <include refid="detailColumns"/>
+        <include refid="detailJoins"/>
+        <include refid="queryWhere"/>
+        ORDER BY sr.reserve_date DESC, sr.create_time DESC
+        LIMIT #{query.offset}, #{query.limit}
+    </select>
+
+    <select id="countReservation" resultType="long">
+        SELECT COUNT(1)
+        <include refid="detailJoins"/>
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectDetail" resultType="com.library.seat.entity.SeatReservation">
+        SELECT <include refid="detailColumns"/>
+        <include refid="detailJoins"/>
+        WHERE sr.id = #{id}
+    </select>
+
+    <select id="selectActiveBySeat" resultType="com.library.seat.entity.SeatReservation">
+        SELECT <include refid="detailColumns"/>
+        <include refid="detailJoins"/>
+        WHERE sr.seat_id = #{seatId}
+          AND sr.reserve_date = #{date}
+          AND sr.status IN ('WAITING', 'SEATED')
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveByUser" resultType="com.library.seat.entity.SeatReservation">
+        SELECT <include refid="detailColumns"/>
+        <include refid="detailJoins"/>
+        WHERE sr.user_id = #{userId}
+          AND sr.reserve_date = #{date}
+          AND sr.status IN ('WAITING', 'SEATED')
+        LIMIT 1
+    </select>
+
+    <!-- 近 N 天预约 / 签到 / 签退趋势 -->
+    <select id="selectDailyTrend" resultType="java.util.Map">
+        SELECT d.dt AS `date`,
+               (SELECT COUNT(*) FROM seat_reservation sr WHERE sr.reserve_date = d.dt AND sr.status &lt;&gt; 'CANCELLED') AS reserved,
+               (SELECT COUNT(*) FROM seat_reservation sr WHERE sr.reserve_date = d.dt AND sr.check_in_time IS NOT NULL) AS checkedIn,
+               (SELECT COUNT(*) FROM seat_reservation sr WHERE sr.reserve_date = d.dt AND sr.check_out_time IS NOT NULL) AS checkedOut
+        FROM (
+            SELECT DATE_SUB(#{endDate}, INTERVAL n DAY) AS dt
+            FROM (
+                WITH RECURSIVE seq(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM seq WHERE n &lt; 30)
+                SELECT n FROM seq
+            ) t
+        ) d
+        WHERE d.dt &gt;= #{startDate}
+        ORDER BY d.dt
+    </select>
+
+    <!-- 各自习室今日使用情况 -->
+    <select id="selectRoomUsage" resultType="java.util.Map">
+        SELECT r.id AS roomId, r.name AS roomName, r.room_type AS roomType, r.capacity AS capacity,
+               IFNULL(SUM(CASE WHEN sr.status IN ('WAITING','SEATED') THEN 1 ELSE 0 END), 0) AS reserved,
+               IFNULL(SUM(CASE WHEN sr.status = 'SEATED' THEN 1 ELSE 0 END), 0) AS seated,
+               IFNULL(SUM(CASE WHEN sr.status = 'LEFT' THEN 1 ELSE 0 END), 0) AS leftCount,
+               (SELECT COUNT(*) FROM long_term_seat lts WHERE lts.room_id = r.id AND lts.status = 'ACTIVE') AS longTermBinds
+        FROM study_room r
+        LEFT JOIN seat_reservation sr ON sr.room_id = r.id AND sr.reserve_date = #{date}
+        GROUP BY r.id, r.name, r.room_type, r.capacity
+        ORDER BY r.id
+    </select>
+
+    <!-- 各自习室近 N 天签到趋势 -->
+    <select id="selectRoomTrend" resultType="java.util.Map">
+        SELECT d.dt AS `date`, r.name AS roomName,
+               (SELECT COUNT(*) FROM seat_reservation sr
+                 WHERE sr.room_id = r.id AND sr.reserve_date = d.dt AND sr.check_in_time IS NOT NULL) AS checkedIn
+        FROM (
+            SELECT DATE_SUB(#{endDate}, INTERVAL n DAY) AS dt
+            FROM (
+                WITH RECURSIVE seq(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM seq WHERE n &lt; 30)
+                SELECT n FROM seq
+            ) t
+        ) d
+        CROSS JOIN study_room r
+        WHERE d.dt &gt;= #{startDate}
+        ORDER BY d.dt, r.id
+    </select>
+
+    <!-- 今日各时段签到人数 -->
+    <select id="selectHourlyCheckIn" resultType="java.util.Map">
+        SELECT h.hour AS hour, IFNULL(c.cnt, 0) AS cnt
+        FROM (
+            WITH RECURSIVE hours(hour) AS (SELECT 0 UNION ALL SELECT hour + 1 FROM hours WHERE hour &lt; 23)
+            SELECT hour FROM hours
+        ) h
+        LEFT JOIN (
+            SELECT HOUR(check_in_time) AS hr, COUNT(*) AS cnt
+            FROM seat_reservation
+            WHERE reserve_date = #{date} AND check_in_time IS NOT NULL
+            GROUP BY HOUR(check_in_time)
+        ) c ON c.hr = h.hour
+        ORDER BY h.hour
+    </select>
+
+    <select id="selectMonthAttendance" resultType="java.util.Map">
+        SELECT
+            COUNT(DISTINCT CASE WHEN check_in_time IS NOT NULL THEN reserve_date END) AS checkInDays,
+            COUNT(DISTINCT CASE WHEN check_out_time IS NOT NULL THEN reserve_date END) AS checkOutDays,
+            COUNT(DISTINCT CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL THEN reserve_date END) AS bothDays,
+            COUNT(DISTINCT reserve_date) AS recordDays
+        FROM seat_reservation
+        WHERE user_id = #{userId}
+          AND reserve_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <select id="selectMonthCheckInDates" resultType="java.lang.String">
+        SELECT DATE_FORMAT(reserve_date, '%Y-%m-%d') AS `date`
+        FROM seat_reservation
+        WHERE user_id = #{userId}
+          AND reserve_date BETWEEN #{startDate} AND #{endDate}
+          AND check_in_time IS NOT NULL
+        GROUP BY reserve_date
+        ORDER BY reserve_date
+    </select>
+
+    <select id="selectGlobalDaily" resultType="java.util.Map">
+        SELECT DATE_FORMAT(sr.reserve_date, '%Y-%m-%d') AS `date`,
+               COUNT(*) AS reserved,
+               SUM(CASE WHEN sr.check_in_time IS NOT NULL THEN 1 ELSE 0 END) AS checkedIn
+        FROM seat_reservation sr
+        WHERE sr.reserve_date BETWEEN #{startDate} AND #{endDate}
+          AND sr.status &lt;&gt; 'CANCELLED'
+        GROUP BY sr.reserve_date
+        ORDER BY sr.reserve_date
+    </select>
+
+    <select id="countTodayCheckIn" resultType="long">
+        SELECT COUNT(*) FROM seat_reservation
+        WHERE reserve_date = #{date} AND check_in_time IS NOT NULL
+    </select>
+
+</mapper>

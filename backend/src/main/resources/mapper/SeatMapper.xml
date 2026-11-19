@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.seat.mapper.SeatMapper">
+
+    <select id="selectSeatMap" resultType="com.library.seat.entity.Seat">
+        SELECT s.*,
+               res.res_state                     AS seatState,
+               u.real_name                       AS occupantName,
+               u.id                              AS occupantId,
+               ltu.real_name                     AS longTermOwner
+        FROM seat s
+        LEFT JOIN (
+            SELECT sr.seat_id,
+                   CASE WHEN sr.overstay = 1 THEN 'OVERDUE'
+                        WHEN sr.status = 'SEATED' THEN 'SEATED'
+                        ELSE 'RESERVED' END AS res_state
+            FROM seat_reservation sr
+            WHERE sr.reserve_date = CURDATE()
+              AND sr.status IN ('WAITING', 'SEATED')
+        ) res ON res.seat_id = s.id
+        LEFT JOIN seat_reservation occ ON occ.seat_id = s.id
+              AND occ.reserve_date = CURDATE() AND occ.status = 'SEATED'
+        LEFT JOIN sys_user u ON u.id = occ.user_id
+        LEFT JOIN long_term_seat lts ON lts.id = (
+                SELECT t.id FROM long_term_seat t
+                WHERE t.seat_id = s.id AND t.status = 'ACTIVE'
+                ORDER BY t.id LIMIT 1)
+        LEFT JOIN sys_user ltu ON ltu.id = lts.user_id
+        WHERE s.room_id = #{roomId}
+        ORDER BY s.row_no, s.col_no
+    </select>
+
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO seat (room_id, seat_no, row_no, col_no, has_power, status)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.roomId}, #{item.seatNo}, #{item.rowNo}, #{item.colNo}, #{item.hasPower}, #{item.status})
+        </foreach>
+    </insert>
+
+</mapper>
