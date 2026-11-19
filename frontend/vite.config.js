@@ -23,7 +23,9 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../backend/src/main/resources/static',
+    // 本地打包：输出到后端的 static 目录，SpringBoot 直接托管（start.bat 用这套）
+    // Vercel 等云平台：输出到标准 dist 目录，否则平台找不到产物会报 STATIC_BUILD_NO_OUT_DIR
+    outDir: process.env.VERCEL ? 'dist' : '../backend/src/main/resources/static',
     emptyOutDir: true,
     chunkSizeWarningLimit: 1500
   }
