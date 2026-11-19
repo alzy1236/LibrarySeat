@@ -1,7 +1,10 @@
 <template>
   <div class="shell">
+    <!-- 移动端遮罩 -->
+    <div v-if="mobileOpen" class="side-mask" @click="mobileOpen = false"></div>
+
     <!-- 侧边栏 -->
-    <aside class="side" :class="{ mini: collapsed }">
+    <aside class="side" :class="{ mini: collapsed, open: mobileOpen }">
       <div class="brand">
         <div class="brand-mark">
           <el-icon><Reading /></el-icon>
@@ -20,6 +23,7 @@
           class="nav-item"
           :class="{ active: isActive(item.path) }"
           :title="item.label"
+          @click="mobileOpen = false"
         >
           <el-icon><component :is="item.icon" /></el-icon>
           <span v-show="!collapsed">{{ item.label }}</span>
@@ -41,8 +45,8 @@
     <div class="main">
       <header class="topbar">
         <div class="tb-left">
-          <button class="collapse" @click="collapsed = !collapsed" title="收起侧栏">
-            <el-icon><component :is="collapsed ? 'Expand' : 'Fold'" /></el-icon>
+          <button class="collapse" @click="toggleSide" :title="isMobile ? '打开菜单' : '收起侧栏'">
+            <el-icon><component :is="collapsed && !isMobile ? 'Expand' : 'Fold'" /></el-icon>
           </button>
           <div class="crumb">{{ route.meta.title }}</div>
         </div>
@@ -83,7 +87,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -96,6 +100,25 @@ const auth = useAuthStore()
 const clock = useClockStore()
 const collapsed = ref(false)
 const hasPending = ref(false)
+
+/* ---------- 移动端侧边栏抽屉 ---------- */
+const mobileOpen = ref(false)
+const isMobile = ref(false)
+const MQ = '(max-width: 900px)'
+let mql = null
+
+function syncIsMobile(e) {
+  isMobile.value = e.matches
+  if (!e.matches) mobileOpen.value = false
+}
+
+function toggleSide() {
+  if (isMobile.value) {
+    mobileOpen.value = !mobileOpen.value
+  } else {
+    collapsed.value = !collapsed.value
+  }
+}
 
 const menus = computed(() => [
   { path: '/student/home', label: '今日自习', icon: 'Odometer' },
@@ -133,7 +156,19 @@ function onCommand(cmd) {
   }
 }
 
-onMounted(loadPending)
+onMounted(() => {
+  loadPending()
+  mql = window.matchMedia(MQ)
+  isMobile.value = mql.matches
+  if (mql.addEventListener) mql.addEventListener('change', syncIsMobile)
+  else mql.addListener(syncIsMobile)
+})
+
+onBeforeUnmount(() => {
+  if (!mql) return
+  if (mql.removeEventListener) mql.removeEventListener('change', syncIsMobile)
+  else mql.removeListener(syncIsMobile)
+})
 </script>
 
 <style scoped>
@@ -157,6 +192,25 @@ onMounted(loadPending)
   height: 100vh;
   transition: width 0.18s ease;
   overflow: hidden;
+  z-index: 60;
+}
+
+/* 移动端遮罩 */
+.side-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.42);
+  z-index: 55;
+  animation: mask-in 0.16s ease;
+}
+
+@keyframes mask-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .side.mini {
@@ -418,5 +472,63 @@ onMounted(loadPending)
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ==================== 移动端：侧栏变抽屉 ==================== */
+@media (max-width: 900px) {
+  .side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 232px;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    border-right: 1px solid var(--c-line);
+  }
+
+  .side.mini {
+    width: 232px;
+  }
+
+  .side.open {
+    transform: translateX(0);
+    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+  }
+
+  .main {
+    width: 100%;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .me-text {
+    display: none;
+  }
+
+  .live {
+    font-size: 12px;
+    padding: 3px 7px;
+  }
+
+  .crumb {
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    padding: 0 10px;
+  }
+
+  .live {
+    display: none;
+  }
 }
 </style>

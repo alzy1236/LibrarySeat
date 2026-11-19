@@ -1,4 +1,4 @@
-﻿// 真实浏览器 UI 验证：使用无头 Edge + CDP（不引入第三方依赖）
+// 真实浏览器 UI 验证：使用无头 Edge + CDP（不引入第三方依赖）
 // 用法：node scripts/ui-test.mjs
 import { spawn } from 'node:child_process'
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
@@ -317,7 +317,8 @@ const run = async () => {
     await sleep(1500)
     const heroTime = await cdp.eval("document.querySelector('.clock-big')?.innerText || ''")
     ok(/^\d{2}:\d{2}:\d{2}$/.test(heroTime), `学生首页服务器实时时钟：${heroTime}`)
-    const btnTexts = await cdp.eval("Array.from(document.querySelectorAll('.big-btn')).map(b => b.innerText.replace(/\\s+/g,' ').trim()).join(' || ')")
+    // 按钮文案带字间距（"签 到"），比较前先去掉所有空白
+    const btnTexts = await cdp.eval("Array.from(document.querySelectorAll('.big-btn')).map(b => b.innerText.replace(/\\s+/g,'').trim()).join(' || ')")
     ok(btnTexts.includes('签到') && btnTexts.includes('签退'), `首页只有签到/签退两个操作按钮：${btnTexts}`)
     await cdp.shot('04-student-home')
 

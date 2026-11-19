@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page home">
     <!-- 顶部状态行：问候 + 时钟 -->
     <section class="top-row">
@@ -1110,6 +1110,58 @@ onUnmounted(() => {})
   }
   .grid-bottom {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 640px) {
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .hero h1 {
+    font-size: 18px;
+    line-height: 1.35;
+  }
+
+  .hero p {
+    font-size: 12px;
+  }
+
+  .hero-clock {
+    text-align: left;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray-200);
+  }
+
+  /* 顶部时钟数字略缩小，避免与日期挤在一行 */
+  .hero-clock .clock-big,
+  .hero-clock .time {
+    font-size: 22px !important;
+  }
+
+  /* 时段条：两列改单列，干掉多余分隔线 */
+  .strip {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* 签到签退两个大按钮堆叠更易点 */
+  .ac-body {
+    gap: 10px !important;
+  }
+
+  .big-btn {
+    min-height: 84px;
+  }
+
+  /* 日历格子高度稍微收一点 */
+  .cal-cell {
+    height: 28px !important;
   }
 }
 </style>

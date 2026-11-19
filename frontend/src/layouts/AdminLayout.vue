@@ -1,6 +1,9 @@
 <template>
   <div class="shell">
-    <aside class="side" :class="{ mini: collapsed }">
+    <!-- 移动端遮罩 -->
+    <div v-if="mobileOpen" class="side-mask" @click="mobileOpen = false"></div>
+
+    <aside class="side" :class="{ mini: collapsed, open: mobileOpen }">
       <div class="brand">
         <div class="brand-mark">
           <el-icon><Reading /></el-icon>
@@ -19,6 +22,7 @@
           :to="item.path"
           class="nav-item"
           :class="{ active: isActive(item.path) }"
+          @click="mobileOpen = false"
         >
           <el-icon><component :is="item.icon" /></el-icon>
           <span v-show="!collapsed">{{ item.label }}</span>
@@ -34,6 +38,7 @@
           :to="item.path"
           class="nav-item"
           :class="{ active: isActive(item.path) }"
+          @click="mobileOpen = false"
         >
           <el-icon><component :is="item.icon" /></el-icon>
           <span v-show="!collapsed">{{ item.label }}</span>
@@ -50,8 +55,8 @@
     <div class="main">
       <header class="topbar">
         <div class="tb-left">
-          <button class="collapse" @click="collapsed = !collapsed" title="收起侧栏">
-            <el-icon><component :is="collapsed ? 'Expand' : 'Fold'" /></el-icon>
+          <button class="collapse" @click="toggleSide" :title="isMobile ? '打开菜单' : '收起侧栏'">
+            <el-icon><component :is="collapsed && !isMobile ? 'Expand' : 'Fold'" /></el-icon>
           </button>
           <div class="crumb">{{ route.meta.title }}</div>
         </div>
@@ -113,6 +118,25 @@ const badge = useBadgeStore()
 const collapsed = ref(false)
 const overview = ref(null)
 
+/* ---------- 移动端侧边栏抽屉 ---------- */
+const mobileOpen = ref(false)
+const isMobile = ref(false)
+const MQ = '(max-width: 900px)'
+let mql = null
+
+function syncIsMobile(e) {
+  isMobile.value = e.matches
+  if (!e.matches) mobileOpen.value = false
+}
+
+function toggleSide() {
+  if (isMobile.value) {
+    mobileOpen.value = !mobileOpen.value
+  } else {
+    collapsed.value = !collapsed.value
+  }
+}
+
 const menus = [
   { path: '/admin/dashboard', label: '数据概览', icon: 'DataLine' },
   { path: '/admin/rooms', label: '楼层与座位', icon: 'OfficeBuilding' },
@@ -156,9 +180,19 @@ onMounted(() => {
   loadHeader()
   badge.refresh()
   badge.startPolling(15000)
+  mql = window.matchMedia(MQ)
+  isMobile.value = mql.matches
+  if (mql.addEventListener) mql.addEventListener('change', syncIsMobile)
+  else mql.addListener(syncIsMobile)
 })
 
-onUnmounted(() => badge.stopPolling())
+onUnmounted(() => {
+  badge.stopPolling()
+  if (mql) {
+    if (mql.removeEventListener) mql.removeEventListener('change', syncIsMobile)
+    else mql.removeListener(syncIsMobile)
+  }
+})
 </script>
 
 <style scoped>
@@ -181,6 +215,25 @@ onUnmounted(() => badge.stopPolling())
   height: 100vh;
   transition: width 0.18s ease;
   overflow: hidden;
+  z-index: 60;
+}
+
+/* 移动端遮罩 */
+.side-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.42);
+  z-index: 55;
+  animation: mask-in 0.16s ease;
+}
+
+@keyframes mask-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .side.mini {
@@ -492,5 +545,66 @@ onUnmounted(() => badge.stopPolling())
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ==================== 移动端：侧栏变抽屉 ==================== */
+@media (max-width: 900px) {
+  .side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 232px;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid var(--c-line);
+  }
+
+  .side.mini {
+    width: 232px;
+  }
+
+  .side.open {
+    transform: translateX(0);
+    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+  }
+
+  .main {
+    width: 100%;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .me-text {
+    display: none;
+  }
+
+  .metrics {
+    display: none;
+  }
+
+  .crumb {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .tb-right {
+    gap: 6px;
+  }
+
+  .crumb {
+    max-width: 38vw;
+  }
 }
 </style>

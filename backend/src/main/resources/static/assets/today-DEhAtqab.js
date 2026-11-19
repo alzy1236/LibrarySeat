@@ -1,1 +1,0 @@
-import{S as a,U as e}from"./index-Bp4eS2kt.js";async function r(){try{return(await a()).data||null}catch{return null}}async function s(){try{return(await e()).data||null}catch{return null}}function c(t){return!!t&&(t.status==="WAITING"||t.status==="SEATED")}export{s as a,r as f,c as i};

@@ -401,4 +401,45 @@ onMounted(load)
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- 手机：字段行改为上下堆叠，避免标签被挤断行 ---------- */
+@media (max-width: 640px) {
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .field-label b {
+    font-size: 13px;
+  }
+
+  .field-label span {
+    display: block;
+    margin-top: 2px;
+  }
+
+  .field > .el-input,
+  .field > .el-input-number,
+  .field > .el-select,
+  .field > .el-date-editor {
+    width: 100% !important;
+  }
+
+  .range {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .range .el-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .preview {
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+}
 </style>
