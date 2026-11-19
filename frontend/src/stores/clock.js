@@ -46,8 +46,19 @@ export const useClockStore = defineStore('clock', {
   actions: {
     connect() {
       if (this._ws && (this._ws.readyState === 0 || this._ws.readyState === 1)) return
-      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const url = `${proto}//${location.host}/api/ws/time`
+      // 云端部署时前端与后端不同源：WebSocket 也要指向后端地址（app-config.js 里的 apiBase）
+      const rawBase = String(
+        (typeof window !== 'undefined' && window.__APP_CONFIG__ && window.__APP_CONFIG__.apiBase) || ''
+      ).trim().replace(/\/+$/, '')
+      let url
+      if (rawBase) {
+        const httpUrl = rawBase.startsWith('http') ? rawBase : `https://${rawBase}`
+        const wsUrl = httpUrl.replace(/^http/, 'ws')
+        url = `${wsUrl}/api/ws/time`
+      } else {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+        url = `${proto}//${location.host}/api/ws/time`
+      }
       try {
         const ws = new WebSocket(url)
         this._ws = ws

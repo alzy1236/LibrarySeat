@@ -5,8 +5,19 @@ import router from '@/router'
 export const TOKEN_KEY = 'ls_token'
 export const USER_KEY = 'ls_user'
 
+/**
+ * 后端地址解析：
+ *  - app-config.js 里 apiBase 为空 -> 同源 /api（本地 SpringBoot 直接托管时用）
+ *  - apiBase 有值 -> 云端部署时指向内网穿透 / 公网后端，例如 https://xxx.trycloudflare.com/api
+ */
+export function resolveApiBase() {
+  const raw = (typeof window !== 'undefined' && window.__APP_CONFIG__ && window.__APP_CONFIG__.apiBase) || ''
+  const base = String(raw).trim().replace(/\/+$/, '')
+  return base ? `${base}/api` : '/api'
+}
+
 const service = axios.create({
-  baseURL: '/api',
+  baseURL: resolveApiBase(),
   timeout: 20000
 })
 
