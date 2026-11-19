@@ -65,6 +65,10 @@
               <a class="link" @click="showTip">忘记密码？</a>
             </div>
             <el-button type="primary" class="submit-btn" :loading="loading" @click="submit">登 录</el-button>
+            <div class="register-row">
+              还没有账号？
+              <a class="link strong" @click="goRegister">立即注册</a>
+            </div>
           </el-form>
 
           <div class="form-foot">登录即表示同意遵守自习室使用规定 · 签到签退以服务器时间为准</div>
@@ -104,6 +108,10 @@ onMounted(() => {
 
 function showTip() {
   ElMessage.info('请联系自习室管理员重置密码')
+}
+
+function goRegister() {
+  router.replace('/register')
 }
 
 async function submit() {
@@ -374,6 +382,17 @@ async function submit() {
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
+}
+
+.register-row {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--gray-500);
+}
+
+.link.strong {
+  font-weight: 600;
 }
 
 .form-foot {

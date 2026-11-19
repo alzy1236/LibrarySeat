@@ -14,6 +14,12 @@ const routes = [
     meta: { title: '登录', public: true }
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/login/RegisterView.vue'),
+    meta: { title: '注册账号', public: true }
+  },
+  {
     path: '/',
     redirect: '/login'
   },
@@ -79,7 +85,8 @@ router.beforeEach((to) => {
     }
     if (restarted || !auth.isLogin) {
       auth.clear()
-      if (to.path !== '/login') {
+      // 登录页与注册页都允许直接停留，其余页面回到登录页
+      if (to.path !== '/login' && to.path !== '/register') {
         return { path: '/login', replace: true }
       }
       return true
