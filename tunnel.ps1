@@ -6,7 +6,13 @@
 #  4) extract public URL
 #  5) rewrite frontend/cloud/app-config.js
 #  6) git commit + push (auto deploy on Vercel)
+#
+#  用法：
+#    双击 tunnel.bat                -> 手动启动（结束时会等待回车）
+#    powershell -File tunnel.ps1 -NoPause  -> 无人值守（开机自启任务用）
 # ============================================================
+param([switch]$NoPause)
+
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -124,4 +130,6 @@ Write-Host "API    : $url"
 Write-Host 'Vercel redeploys in about 1-2 minutes.'
 Write-Host 'Keep your PC on and the tunnel running, otherwise the site cannot reach the backend.'
 Write-Host ''
-Read-Host 'Press Enter to close'
+if (-not $NoPause) {
+  Read-Host 'Press Enter to close'
+}

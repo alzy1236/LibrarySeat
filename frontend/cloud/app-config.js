@@ -1,7 +1,7 @@
 ﻿/* ============================================================
  * 浜戠閮ㄧ讲涓撶敤閰嶇疆锛堟瀯寤烘椂瑕嗙洊鍒?dist/app-config.js锛? * 鑷姩鐢熸垚锛氱敱 tunnel.bat 鍐欏叆锛岃鍕挎墜宸ョ淮鎶ゅ湴鍧€
- * 鏈€鍚庢洿鏂帮細2026-11-20 14:38:24
+ * 鏈€鍚庢洿鏂帮細2026-11-20 14:41:37
  * ============================================================ */
 window.__APP_CONFIG__ = {
-  apiBase: 'https://clause-pos-hansen-calvin.trycloudflare.com'
+  apiBase: 'https://trials-samba-bowling-rides.trycloudflare.com'
 }
