@@ -1,7 +1,11 @@
 import request from './request'
 
 /* ---------------- 认证 ---------------- */
-export const login = (data) => request.post('/auth/login', data)
+// 登录用表单编码发送：属于 CORS 简单请求，不触发预检，跨域部署可省一个网络往返
+export const login = (data) =>
+  request.post('/auth/login', new URLSearchParams(data), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
 export const logout = () => request.post('/auth/logout')
 export const getInfo = () => request.get('/auth/info')
 export const changePassword = (data) => request.put('/auth/password', data)

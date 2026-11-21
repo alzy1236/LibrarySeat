@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -35,6 +36,21 @@ public class AuthController {
      */
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@Validated @RequestBody LoginDTO dto) {
+        return Result.success("登录成功", userService.login(dto));
+    }
+
+    /**
+     * 账号密码登录（表单编码）
+     * <p>
+     * 前端用它登录：application/x-www-form-urlencoded 属于 CORS 简单请求，
+     * 浏览器不会先发预检（OPTIONS），跨域部署时少一个网络往返（约 1-2 秒）。
+     */
+    @PostMapping(value = "/login", consumes = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Result<Map<String, Object>> loginForm(@RequestParam String username,
+                                                 @RequestParam String password) {
+        LoginDTO dto = new LoginDTO();
+        dto.setUsername(username);
+        dto.setPassword(password);
         return Result.success("登录成功", userService.login(dto));
     }
 

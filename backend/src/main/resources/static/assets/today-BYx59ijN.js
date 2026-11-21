@@ -1,0 +1,1 @@
+import{a2 as a,a3 as e}from"./index-DGAwTGIc.js";async function r(){try{return(await a()).data||null}catch{return null}}async function s(){try{return(await e()).data||null}catch{return null}}function c(t){return!!t&&(t.status==="WAITING"||t.status==="SEATED")}export{s as a,r as f,c as i};
