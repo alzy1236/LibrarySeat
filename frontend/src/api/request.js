@@ -67,14 +67,30 @@ service.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status
+    const cfg = error.config || {}
+    const method = String(cfg.method || 'get').toLowerCase()
+    const path = String(cfg.url || '')
+
+    // 网络层失败（无响应）：GET 自动重试 1 次，跨公网时偶发丢包不再直接报错
+    const noResponse = !error.response && error.code !== 'ECONNABORTED'
+    if (noResponse && method === 'get') {
+      cfg.__retried = (cfg.__retried || 0) + 1
+      if (cfg.__retried <= 1) {
+        return new Promise((resolve) => setTimeout(resolve, 700))
+          .then(() => service(cfg))
+      }
+    }
+
     if (status === 401) {
       handleUnauthorized()
     } else if (status === 404) {
       toast('error', '接口不存在，请确认后端服务已启动')
     } else if (error.code === 'ECONNABORTED') {
-      toast('error', '请求超时，请稍后重试')
+      toast('error', `请求超时（${path}），请检查网络后重试`)
+    } else if (noResponse) {
+      toast('error', `网络异常（${method.toUpperCase()} ${path}），请检查后端服务是否启动`)
     } else {
-      toast('error', '网络异常，请检查后端服务是否启动')
+      toast('error', `请求失败（${status} ${path}）`)
     }
     return Promise.reject(error)
   }
