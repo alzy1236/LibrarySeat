@@ -23,7 +23,9 @@
         LEFT JOIN sys_user u ON u.id = occ.user_id
         LEFT JOIN long_term_seat lts ON lts.id = (
                 SELECT t.id FROM long_term_seat t
-                WHERE t.seat_id = s.id AND t.status = 'ACTIVE'
+                WHERE t.seat_id = s.id
+                  AND t.room_id = s.room_id
+                  AND t.status = 'ACTIVE'
                 ORDER BY t.id LIMIT 1)
         LEFT JOIN sys_user ltu ON ltu.id = lts.user_id
         WHERE s.room_id = #{roomId}

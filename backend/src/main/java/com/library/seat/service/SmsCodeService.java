@@ -177,6 +177,33 @@ public class SmsCodeService {
         log.info("用户 {} 通过短信验证码重置了密码", user.getUsername());
     }
 
+    /* ==================== 管理端：连通性测试 ==================== */
+
+    /**
+     * 发送测试短信（不入库、不限流），用于管理员验证短信配置是否正确
+     */
+    public Map<String, Object> testSend(String phone) {
+        validatePhone(phone);
+        String code = String.format("%04d", RANDOM.nextInt(10000));
+        boolean mock = mockSender.isMock();
+        boolean sent = mock
+                ? mockSender.send(phone, code, "TEST")
+                : aliyunSender.send(phone, code, "TEST");
+
+        Map<String, Object> data = new HashMap<>(6);
+        data.put("mock", mock);
+        data.put("sent", sent);
+        if (mock) {
+            data.put("code", code);
+            data.put("tip", "当前为演示模式，未真正发出短信；测试验证码为 " + code);
+        } else if (sent) {
+            data.put("tip", "测试短信已提交阿里云，请查看手机");
+        } else {
+            data.put("tip", "发送失败：请检查 AccessKey、签名名称、模板 CODE 是否正确，以及账号是否欠费");
+        }
+        return data;
+    }
+
     /* ==================== 工具 ==================== */
 
     public SysUser findUserByPhone(String phone) {

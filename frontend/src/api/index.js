@@ -109,3 +109,6 @@ export const deleteLocation = (id) => request.delete(`/admin/locations/${id}`)
 export const toggleLocation = (id, enabled) =>
   request.post(`/admin/locations/${id}/status`, null, { params: { enabled } })
 export const locationRooms = () => request.get('/admin/locations/rooms')
+
+/* ---------------- 短信配置 ---------------- */
+export const testSms = (phone) => request.post('/admin/sms/test', { phone })

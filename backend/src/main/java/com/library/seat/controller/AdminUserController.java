@@ -38,6 +38,7 @@ public class AdminUserController {
     private final SysUserService userService;
     private final SysNoticeService noticeService;
     private final SysConfigService configService;
+    private final com.library.seat.service.SmsCodeService smsCodeService;
 
     // ========================= 用户管理 =========================
 
@@ -124,6 +125,15 @@ public class AdminUserController {
     public Result<Void> updateConfigs(@RequestBody Map<String, String> values) {
         configService.updateBatch(values);
         return Result.success("系统参数已保存", null);
+    }
+
+    /**
+     * 短信配置连通性测试：按当前配置发一条测试短信
+     */
+    @PostMapping("/sms/test")
+    public Result<Map<String, Object>> testSms(@RequestBody Map<String, String> body) {
+        Map<String, Object> data = smsCodeService.testSend(body.get("phone"));
+        return Result.success(String.valueOf(data.get("tip")), data);
     }
 
     /**
