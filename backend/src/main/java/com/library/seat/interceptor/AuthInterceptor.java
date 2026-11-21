@@ -66,6 +66,11 @@ public class AuthInterceptor implements HandlerInterceptor {
      * 管理员接口权限校验：/api/admin/** 仅管理员可访问
      */
     private boolean checkRole(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // 浏览器跨域预检（OPTIONS）不携带 Authorization，必须直接放行，
+        // 否则预检被拒会导致跨域部署时所有 /api/admin/** 请求都被浏览器拦截
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         String uri = request.getRequestURI();
         if (uri.contains("/api/admin/") && !UserContext.isAdmin()) {
             writeError(response, 403, "无权限访问，该功能仅管理员可用");
