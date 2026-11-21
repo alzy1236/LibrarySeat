@@ -1,11 +1,21 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { fileURLToPath, URL } from 'node:url'
 
 // 前端通过 /api 代理到 SpringBoot 后端（开发模式）
 // 打包时输出到 backend/src/main/resources/static，由 SpringBoot 直接托管，启动后自动进入登录页
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    // Element Plus 组件按需引入：只打包真正用到的组件，主包体积可减小约 40%
+    // importStyle: false —— 组件样式仍由 main.js 里的 element-plus/dist/index.css 统一提供
+    Components({
+      dts: false,
+      resolvers: [ElementPlusResolver({ importStyle: false })]
+    })
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
