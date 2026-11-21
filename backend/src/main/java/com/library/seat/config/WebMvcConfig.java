@@ -25,9 +25,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/captcha",
                         "/api/auth/register",
                         "/api/auth/health",
-                        // 短信验证码与找回密码：登录前使用，必须在白名单内
-                        "/api/auth/sms-code",
-                        "/api/auth/reset-password",
                         "/api/system/server-time",
                         "/api/system/clock",
                         "/api/system/info",

@@ -6,10 +6,6 @@ export const logout = () => request.post('/auth/logout')
 export const getInfo = () => request.get('/auth/info')
 export const changePassword = (data) => request.put('/auth/password', data)
 export const register = (data) => request.post('/auth/register', data)
-/** 发送短信验证码：scene = REGISTER | RESET */
-export const sendSmsCode = (phone, scene) => request.post('/auth/sms-code', { phone, scene })
-/** 手机号 + 验证码重置密码 */
-export const resetPassword = (data) => request.post('/auth/reset-password', data)
 
 /* ---------------- 公共 ---------------- */
 export const getNotices = (limit = 10) => request.get('/public/notices', { params: { limit } })
@@ -109,6 +105,3 @@ export const deleteLocation = (id) => request.delete(`/admin/locations/${id}`)
 export const toggleLocation = (id, enabled) =>
   request.post(`/admin/locations/${id}/status`, null, { params: { enabled } })
 export const locationRooms = () => request.get('/admin/locations/rooms')
-
-/* ---------------- 短信配置 ---------------- */
-export const testSms = (phone) => request.post('/admin/sms/test', { phone })

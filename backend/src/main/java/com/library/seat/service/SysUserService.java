@@ -95,16 +95,6 @@ public class SysUserService extends ServiceImpl<SysUserMapper, SysUser> {
         if (exists > 0) {
             throw new BusinessException("账号已存在，请更换账号");
         }
-        // 手机号唯一（用于短信验证码找回密码）
-        if (StringUtils.hasText(dto.getPhone())) {
-            long phoneExists = count(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, dto.getPhone().trim()));
-            if (phoneExists > 0) {
-                throw new BusinessException("该手机号已被其他账号绑定");
-            }
-            if (!dto.getPhone().trim().matches("^1[3-9]\\d{9}$")) {
-                throw new BusinessException("手机号格式不正确");
-            }
-        }
         SysUser user = new SysUser();
         user.setUsername(dto.getUsername().trim());
         user.setRealName(dto.getRealName());

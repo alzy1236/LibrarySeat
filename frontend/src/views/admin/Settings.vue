@@ -100,75 +100,6 @@
             </li>
           </ul>
         </section>
-      <section class="card">
-          <div class="card-head">
-            <h3><span class="ico"><el-icon><Message /></el-icon></span>短信验证码</h3>
-            <span class="pill" :class="sms.provider === 'aliyun' ? 'pill-long' : 'pill-short'">
-              {{ sms.provider === 'aliyun' ? '真实短信' : '演示模式' }}
-            </span>
-          </div>
-
-          <div class="field">
-            <div class="field-label">
-              <b>发送方式</b>
-              <span>演示模式不发真实短信，验证码直接显示在页面上</span>
-            </div>
-            <el-radio-group v-model="sms.provider">
-              <el-radio-button label="mock">演示模式</el-radio-button>
-              <el-radio-button label="aliyun">阿里云短信</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <template v-if="sms.provider === 'aliyun'">
-            <div class="field">
-              <div class="field-label">
-                <b>AccessKeyId</b>
-                <span>建议用只有短信权限的子账号</span>
-              </div>
-              <el-input v-model="sms.accessKeyId" placeholder="LTAI..." style="width: 260px" />
-            </div>
-
-            <div class="field">
-              <div class="field-label">
-                <b>AccessKeySecret</b>
-                <span>仅保存在本系统 sys_config 表中</span>
-              </div>
-              <el-input v-model="sms.accessKeySecret" type="password" show-password placeholder="••••••" style="width: 260px" />
-            </div>
-
-            <div class="field">
-              <div class="field-label">
-                <b>短信签名</b>
-                <span>控制台申请的签名，如：自习室预约系统</span>
-              </div>
-              <el-input v-model="sms.signName" placeholder="需审核通过" style="width: 260px" />
-            </div>
-
-            <div class="field">
-              <div class="field-label">
-                <b>短信模板 CODE</b>
-                <span>模板内变量名必须是 code</span>
-              </div>
-              <el-input v-model="sms.templateCode" placeholder="SMS_123456789" style="width: 260px" />
-            </div>
-
-            <div class="field">
-              <div class="field-label">
-                <b>发送测试</b>
-                <span>填一个手机号，点按钮验证配置是否可用</span>
-              </div>
-              <div class="test-row">
-                <el-input v-model="sms.testPhone" placeholder="11 位手机号" maxlength="11" style="width: 160px" />
-                <el-button :loading="sms.testing" @click="testSms">发送测试短信</el-button>
-              </div>
-            </div>
-
-            <div class="preview">
-              <span>说明</span>
-              <b class="mono">真实短信需在阿里云完成实名认证 → 申请签名 → 申请模板（变量名 code）→ 充值，审核通过后填入左侧四项即可。</b>
-            </div>
-          </template>
-        </section>
       </div>
 
       <!-- 右列：服务器时间 + 系统信息 -->
@@ -216,7 +147,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Check } from '@element-plus/icons-vue'
-import { adminConfigs, updateConfigs, getSystemInfo, testSms as apiTestSms } from '@/api'
+import { adminConfigs, updateConfigs, getSystemInfo } from '@/api'
 import { useClockStore } from '@/stores/clock'
 
 const clock = useClockStore()
@@ -226,37 +157,6 @@ const values = reactive({})
 const minDays = ref(20)
 const info = reactive({})
 const times = reactive({ checkinDeadline: '', checkinOpen: '', checkoutStart: '', checkoutEnd: '' })
-
-/* 短信配置 */
-const sms = reactive({
-  provider: 'mock',
-  accessKeyId: '',
-  accessKeySecret: '',
-  signName: '',
-  templateCode: '',
-  testPhone: '',
-  testing: false
-})
-
-async function testSms() {
-  if (!/^1[3-9]\d{9}$/.test(sms.testPhone)) {
-    ElMessage.warning('请先填写正确的 11 位手机号')
-    return
-  }
-  sms.testing = true
-  try {
-    const res = await apiTestSms(sms.testPhone.trim())
-    const d = res.data || {}
-    if (d.sent) {
-      ElMessage.success(d.tip || '测试短信已发送')
-    } else {
-      ElMessage.error(d.tip || '发送失败')
-    }
-  } catch (e) {
-  } finally {
-    sms.testing = false
-  }
-}
 
 const uptimeText = computed(() => {
   const s = Number(info.uptimeSeconds || 0)
@@ -284,11 +184,6 @@ async function load() {
     times.checkoutEnd = pick('checkout.end', '23:59')
     values['short.clear.deadline'] = pick('short.clear.deadline', '24:00')
     minDays.value = Number(pick('long.min.days', 20))
-    sms.provider = pick('sms.provider', 'mock')
-    sms.accessKeyId = pick('sms.aliyun.accessKeyId', '')
-    sms.accessKeySecret = pick('sms.aliyun.accessKeySecret', '')
-    sms.signName = pick('sms.aliyun.signName', '')
-    sms.templateCode = pick('sms.aliyun.templateCode', '')
     Object.assign(info, sys.data || {})
   } finally {
     loading.value = false
@@ -304,12 +199,7 @@ async function save() {
       'checkout.start': times.checkoutStart,
       'checkout.end': times.checkoutEnd,
       'short.clear.deadline': values['short.clear.deadline'],
-      'long.min.days': String(minDays.value),
-      'sms.provider': sms.provider,
-      'sms.aliyun.accessKeyId': sms.accessKeyId,
-      'sms.aliyun.accessKeySecret': sms.accessKeySecret,
-      'sms.aliyun.signName': sms.signName,
-      'sms.aliyun.templateCode': sms.templateCode
+      'long.min.days': String(minDays.value)
     })
     ElMessage.success('设置已保存，立即生效')
     clock.rulesLoaded = false
@@ -401,12 +291,6 @@ onMounted(load)
   padding: 11px 14px;
   font-size: 12px;
   color: var(--brand-hover);
-}
-
-.test-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 .preview span {
