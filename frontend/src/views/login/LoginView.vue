@@ -62,7 +62,7 @@
             </el-form-item>
             <div class="form-row">
               <el-checkbox v-model="remember">记住账号</el-checkbox>
-              <a class="link" @click="showTip">忘记密码？</a>
+              <a class="link" @click="openReset">忘记密码？</a>
             </div>
             <el-button type="primary" class="submit-btn" :loading="loading" @click="submit">登 录</el-button>
             <div class="register-row">
@@ -75,15 +75,45 @@
         </div>
       </section>
     </div>
+
+    <!-- 忘记密码：手机验证码自助重置 -->
+    <el-dialog v-model="resetVisible" title="找回密码" width="420px" append-to-body destroy-on-close>
+      <div class="reset-tip">请输入注册时绑定的手机号，验证通过后可直接设置新密码，无需联系管理员。</div>
+      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top">
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="resetForm.phone" placeholder="11 位手机号" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="短信验证码" prop="code">
+          <div class="code-row">
+            <el-input v-model="resetForm.code" placeholder="4 位数字" maxlength="4" />
+            <el-button :disabled="countdown > 0" :loading="sending" @click="sendResetCode">
+              {{ countdown > 0 ? countdown + ' 秒后重发' : '获取验证码' }}
+            </el-button>
+          </div>
+        </el-form-item>
+        <div v-if="mockTip" class="mock-tip">{{ mockTip }}</div>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="resetForm.newPassword" type="password" placeholder="至少 6 位" show-password />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="resetForm.confirmPassword" type="password" placeholder="再输一次" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetVisible = false">取消</el-button>
+        <el-button type="primary" :loading="resetting" @click="submitReset">重置密码</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useClockStore } from '@/stores/clock'
+import { sendSmsCode, resetPassword } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -106,8 +136,108 @@ onMounted(() => {
   clock.connect()
 })
 
-function showTip() {
-  ElMessage.info('请联系自习室管理员重置密码')
+onBeforeUnmount(() => clearInterval(timer))
+
+/* ---------------- 找回密码（手机验证码） ---------------- */
+const resetVisible = ref(false)
+const resetFormRef = ref(null)
+const resetting = ref(false)
+const sending = ref(false)
+const countdown = ref(0)
+const mockTip = ref('')
+let timer = null
+
+const resetForm = reactive({
+  phone: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const validateConfirmPwd = (rule, value, cb) => {
+  if (!value) return cb(new Error('请再次输入新密码'))
+  if (value !== resetForm.newPassword) return cb(new Error('两次输入的密码不一致'))
+  cb()
+}
+
+const resetRules = {
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { pattern: /^\d{4}$/, message: '验证码为 4 位数字', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 32, message: '密码长度 6-32 位', trigger: 'blur' }
+  ],
+  confirmPassword: [{ required: true, validator: validateConfirmPwd, trigger: 'blur' }]
+}
+
+function startCountdown(seconds) {
+  countdown.value = seconds
+  clearInterval(timer)
+  timer = setInterval(() => {
+    countdown.value -= 1
+    if (countdown.value <= 0) clearInterval(timer)
+  }, 1000)
+}
+
+function openReset() {
+  resetForm.phone = ''
+  resetForm.code = ''
+  resetForm.newPassword = ''
+  resetForm.confirmPassword = ''
+  mockTip.value = ''
+  resetVisible.value = true
+}
+
+async function sendResetCode() {
+  if (sending.value || countdown.value > 0) return
+  if (!/^1[3-9]\d{9}$/.test(resetForm.phone)) {
+    ElMessage.warning('请先填写正确的 11 位手机号')
+    return
+  }
+  sending.value = true
+  try {
+    const res = await sendSmsCode(resetForm.phone.trim(), 'RESET')
+    const data = res.data || {}
+    startCountdown(data.resendSeconds || 60)
+    if (data.mock) {
+      mockTip.value = data.tip || `演示模式：验证码为 ${data.code}`
+      resetForm.code = data.code || ''
+      ElMessage.success('验证码已生成（演示模式，已自动填入）')
+    } else {
+      mockTip.value = ''
+      ElMessage.success('验证码已发送，请查收短信')
+    }
+  } catch (e) {
+    /* 拦截器已提示 */
+  } finally {
+    sending.value = false
+  }
+}
+
+async function submitReset() {
+  if (!resetFormRef.value) return
+  const valid = await resetFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  resetting.value = true
+  try {
+    await resetPassword({
+      phone: resetForm.phone.trim(),
+      code: resetForm.code.trim(),
+      newPassword: resetForm.newPassword
+    })
+    ElMessage.success('密码已重置，请使用学号 / 管理员账号和新密码登录')
+    resetVisible.value = false
+  } catch (e) {
+    /* 拦截器已提示 */
+  } finally {
+    resetting.value = false
+  }
 }
 
 function goRegister() {
@@ -363,6 +493,39 @@ async function submit() {
   justify-content: space-between;
   margin: -2px 0 18px;
   font-size: 12.5px;
+}
+
+/* ---------- 找回密码弹窗 ---------- */
+.reset-tip {
+  margin-bottom: 14px;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.code-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.code-row .el-input {
+  flex: 1;
+}
+
+.mock-tip {
+  margin: -6px 0 12px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 11.5px;
+  line-height: 1.6;
 }
 
 .link {

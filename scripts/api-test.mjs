@@ -63,7 +63,11 @@ const run = async () => {
   ok(roomTrend.code === 200 && roomTrend.data.series.length === 5, `自习室签到趋势系列 ${roomTrend.data?.series?.length}`)
 
   const users = await call('GET', '/api/admin/users?pageSize=5&role=STUDENT', { token: at })
-  ok(users.code === 200 && users.data.total === 20, `用户分页 total=${users.data?.total}`)
+  // 演示数据初始 20 名学生，用户自助注册会增加，这里只校验"至少 20 且分页生效"
+  ok(
+    users.code === 200 && users.data.total >= 20 && users.data.records.length <= 5,
+    `用户分页 total=${users.data?.total} 本页=${users.data?.records?.length}`
+  )
 
   const resList = await call('GET', '/api/admin/reservations?pageSize=5', { token: at })
   ok(resList.code === 200, `预约记录分页 total=${resList.data?.total}`)

@@ -5,8 +5,11 @@ import com.library.seat.common.Result;
 import com.library.seat.common.UserContext;
 import com.library.seat.dto.LoginDTO;
 import com.library.seat.dto.PasswordDTO;
+import com.library.seat.dto.ResetPasswordDTO;
+import com.library.seat.dto.SmsRequest;
 import com.library.seat.dto.UserDTO;
 import com.library.seat.entity.SysUser;
+import com.library.seat.service.SmsCodeService;
 import com.library.seat.service.SysUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -29,6 +32,7 @@ import java.util.Map;
 public class AuthController {
 
     private final SysUserService userService;
+    private final SmsCodeService smsCodeService;
 
     /**
      * 账号密码登录：根据账号类型返回跳转路径（管理员 -> 管理端，学生 -> 学生端）
@@ -66,13 +70,47 @@ public class AuthController {
 
     /**
      * 学生注册（自助注册默认为学生角色）
+     * <p>
+     * 开启短信校验（sms.verify.register=1）时，必须携带手机号 + 验证码。
      */
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserDTO dto) {
         dto.setRole(Constants.ROLE_STUDENT);
         dto.setStatus(1);
+
+        if (smsCodeService.registerVerifyRequired()) {
+            if (!org.springframework.util.StringUtils.hasText(dto.getPhone())) {
+                throw new com.library.seat.common.BusinessException("请填写手机号");
+            }
+            if (smsCodeService.existsPhone(dto.getPhone())) {
+                throw new com.library.seat.common.BusinessException("该手机号已被注册");
+            }
+            smsCodeService.verifyCode(dto.getPhone(), dto.getSmsCode(), SmsCodeService.SCENE_REGISTER);
+        }
+
         userService.saveUser(dto);
         return Result.success("注册成功，请登录", null);
+    }
+
+    /**
+     * 发送短信验证码
+     * <p>
+     * scene=REGISTER 注册；scene=RESET 重置密码。
+     * 演示模式（sms.provider=mock）下会把验证码放在返回数据里，前端直接提示。
+     */
+    @PostMapping("/sms-code")
+    public Result<Map<String, Object>> sendSmsCode(@RequestBody SmsRequest dto) {
+        Map<String, Object> data = smsCodeService.sendCode(dto.getPhone(), dto.getScene());
+        return Result.success(String.valueOf(data.get("tip")), data);
+    }
+
+    /**
+     * 通过手机验证码重置密码（忘记密码自助找回，无需管理员）
+     */
+    @PostMapping("/reset-password")
+    public Result<Void> resetPassword(@RequestBody ResetPasswordDTO dto) {
+        smsCodeService.resetPassword(dto.getPhone(), dto.getCode(), dto.getNewPassword());
+        return Result.success("密码已重置，请使用新密码登录", null);
     }
 
     /**

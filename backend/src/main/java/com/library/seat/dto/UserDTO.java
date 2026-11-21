@@ -34,4 +34,7 @@ public class UserDTO {
     private String phone;
 
     private Integer status;
+
+    /** 注册时的短信验证码（自助注册必填） */
+    private String smsCode;
 }
