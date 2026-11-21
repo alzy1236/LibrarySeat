@@ -144,6 +144,7 @@ const menus = [
   { path: '/admin/reviews', label: '申请审核', icon: 'Checked', key: 'pending' },
   { path: '/admin/long-term', label: '固定座位 · 考核', icon: 'Collection' },
   { path: '/admin/students', label: '学生账号', icon: 'UserFilled' },
+  { path: '/admin/locations', label: '签到点管理', icon: 'Location' },
   { path: '/admin/notices', label: '公告管理', icon: 'Bell' },
   { path: '/admin/settings', label: '系统设置', icon: 'Setting' },
   { path: '/admin/profile', label: '个人中心', icon: 'Avatar' }

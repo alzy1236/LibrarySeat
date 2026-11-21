@@ -40,6 +40,7 @@ public class StudentController {
     private final ReservationService reservationService;
     private final SysConfigService configService;
     private final ClockService clockService;
+    private final com.library.seat.service.CheckinLocationService locationService;
 
     /**
      * 开放的自习室列表（含今日预约统计）
@@ -91,19 +92,47 @@ public class StudentController {
     }
 
     /**
-     * 签到
+     * 签到（latitude/longitude 为浏览器定位得到的 WGS-84 坐标，启用定位校验时必填）
      */
     @PostMapping("/checkin")
-    public Result<SeatReservation> checkIn(@RequestParam Long reservationId) {
-        return Result.success("签到成功", reservationService.checkIn(reservationId, UserContext.getUserId()));
+    public Result<SeatReservation> checkIn(@RequestParam Long reservationId,
+                                           @RequestParam(required = false) Double latitude,
+                                           @RequestParam(required = false) Double longitude) {
+        return Result.success("签到成功",
+                reservationService.checkIn(reservationId, UserContext.getUserId(), latitude, longitude));
     }
 
     /**
-     * 签退
+     * 签退（同样需要定位，用于校验是否仍在签到点范围内）
      */
     @PostMapping("/checkout")
-    public Result<SeatReservation> checkOut(@RequestParam Long reservationId) {
-        return Result.success("签退成功", reservationService.checkOut(reservationId, UserContext.getUserId()));
+    public Result<SeatReservation> checkOut(@RequestParam Long reservationId,
+                                            @RequestParam(required = false) Double latitude,
+                                            @RequestParam(required = false) Double longitude) {
+        return Result.success("签退成功",
+                reservationService.checkOut(reservationId, UserContext.getUserId(), latitude, longitude));
+    }
+
+    /**
+     * 当前位置对应的签到点信息（供学生端展示范围与地图）
+     */
+    @GetMapping("/checkin-location")
+    public Result<com.library.seat.entity.CheckinLocation> checkinLocation(@RequestParam(required = false) Long roomId) {
+        Long target = roomId;
+        if (target == null) {
+            SeatReservation today = reservationService.todayReservation(UserContext.getUserId());
+            target = today == null ? null : today.getRoomId();
+        }
+        com.library.seat.entity.CheckinLocation loc = locationService.effective(target);
+        return Result.success(loc);
+    }
+
+    /**
+     * 定位校验总开关状态
+     */
+    @GetMapping("/checkin-location/enabled")
+    public Result<Boolean> locationEnabled() {
+        return Result.success(locationService.isEnabled());
     }
 
     /**

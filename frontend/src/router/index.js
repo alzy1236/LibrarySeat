@@ -50,6 +50,7 @@ const routes = [
       { path: 'reviews', name: 'AdminReviews', component: () => import('@/views/admin/ReviewManage.vue'), meta: { title: '申请审核' } },
       { path: 'long-term', name: 'AdminLongTerm', component: () => import('@/views/admin/LongTermManage.vue'), meta: { title: '固定座位 · 月度考核' } },
       { path: 'students', name: 'AdminUsers', component: () => import('@/views/admin/UserManage.vue'), meta: { title: '学生账号管理' } },
+      { path: 'locations', name: 'AdminLocations', component: () => import('@/views/admin/LocationManage.vue'), meta: { title: '签到点管理' } },
       { path: 'notices', name: 'AdminNotices', component: () => import('@/views/admin/NoticeManage.vue'), meta: { title: '公告管理' } },
       { path: 'settings', name: 'AdminSettings', component: () => import('@/views/admin/Settings.vue'), meta: { title: '系统设置' } },
       { path: 'profile', name: 'AdminProfile', component: () => import('@/views/common/Profile.vue'), meta: { title: '个人中心' } }

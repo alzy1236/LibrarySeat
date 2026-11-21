@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.seat.mapper.CheckinLocationMapper">
+
+    <!-- 列表：带自习室名称 -->
+    <select id="selectWithRoom" resultType="com.library.seat.entity.CheckinLocation">
+        SELECT l.*, r.name AS roomName
+        FROM checkin_location l
+        LEFT JOIN study_room r ON r.id = l.room_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (l.name LIKE CONCAT('%', #{keyword}, '%')
+                 OR IFNULL(r.name, '') LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY l.enabled DESC, l.room_id IS NOT NULL DESC, l.id ASC
+    </select>
+
+    <!-- 对指定自习室生效的签到点：先找房间专属，再退回全楼通用 -->
+    <select id="selectEffective" resultType="com.library.seat.entity.CheckinLocation">
+        SELECT l.*
+        FROM checkin_location l
+        WHERE l.enabled = 1
+          AND (l.room_id = #{roomId} OR l.room_id IS NULL)
+        ORDER BY (l.room_id IS NULL) ASC, l.id ASC
+        LIMIT 1
+    </select>
+
+</mapper>

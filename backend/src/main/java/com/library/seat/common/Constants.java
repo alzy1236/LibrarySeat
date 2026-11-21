@@ -37,6 +37,8 @@ public final class Constants {
     public static final String CFG_SHORT_CLEAR_DEADLINE = "short.clear.deadline";
     public static final String CFG_LONG_MIN_DAYS = "long.min.days";
     public static final String CFG_LONG_ACTIVE_MONTH = "long.active.month";
+    /** 是否启用签到定位校验（1 启用 / 0 关闭） */
+    public static final String CFG_CHECKIN_LOCATION_ENABLED = "checkin.location.enabled";
 
     /** 请求上下文中的登录用户 ID */
     public static final String REQ_USER_ID = "LOGIN_USER_ID";

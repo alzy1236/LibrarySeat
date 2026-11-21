@@ -44,6 +44,7 @@ public class ReservationService {
     private final StudyRoomMapper roomMapper;
     private final SysConfigService configService;
     private final LongTermSeatService longTermSeatService;
+    private final CheckinLocationService locationService;
 
     /**
      * 学生选座
@@ -133,9 +134,12 @@ public class ReservationService {
 
     /**
      * 签到（仅长期自习室：每天 08:30 前签到）
+     *
+     * @param lat 学生当前纬度（WGS-84），未开启定位校验时可传 null
+     * @param lng 学生当前经度（WGS-84），未开启定位校验时可传 null
      */
     @Transactional(rollbackFor = Exception.class)
-    public SeatReservation checkIn(Long reservationId, Long userId) {
+    public SeatReservation checkIn(Long reservationId, Long userId, Double lat, Double lng) {
         SeatReservation res = getOwnedReservation(reservationId, userId);
         StudyRoom room = roomMapper.selectById(res.getRoomId());
         LocalDateTime now = LocalDateTime.now();
@@ -156,6 +160,9 @@ public class ReservationService {
             throw new BusinessException(113, "已超过签到截止时间 " + deadline + "，今日签到失败，将影响本月考核");
         }
 
+        // 地理围栏校验：必须在签到点允许范围内
+        locationService.assertInRange(res.getRoomId(), lat, lng, "签到");
+
         res.setStatus(Constants.RES_SEATED);
         res.setCheckInTime(now);
         res.setUpdateTime(now);
@@ -165,10 +172,20 @@ public class ReservationService {
     }
 
     /**
+     * 兼容旧调用（不做定位校验）
+     */
+    public SeatReservation checkIn(Long reservationId, Long userId) {
+        return checkIn(reservationId, userId, null, null);
+    }
+
+    /**
      * 签退
+     *
+     * @param lat 学生当前纬度（WGS-84）
+     * @param lng 学生当前经度（WGS-84）
      */
     @Transactional(rollbackFor = Exception.class)
-    public SeatReservation checkOut(Long reservationId, Long userId) {
+    public SeatReservation checkOut(Long reservationId, Long userId, Double lat, Double lng) {
         SeatReservation res = getOwnedReservation(reservationId, userId);
         StudyRoom room = roomMapper.selectById(res.getRoomId());
         LocalDateTime now = LocalDateTime.now();
@@ -193,12 +210,22 @@ public class ReservationService {
             }
         }
 
+        // 地理围栏校验：必须在签到点允许范围内
+        locationService.assertInRange(res.getRoomId(), lat, lng, "签退");
+
         res.setStatus(Constants.RES_LEFT);
         res.setCheckOutTime(now);
         res.setUpdateTime(now);
         reservationMapper.updateById(res);
         log.info("学生 {} 于 {} 签退座位 {} ({})", userId, now, res.getSeatId(), room.getName());
         return reservationMapper.selectDetail(res.getId());
+    }
+
+    /**
+     * 兼容旧调用（不做定位校验）
+     */
+    public SeatReservation checkOut(Long reservationId, Long userId) {
+        return checkOut(reservationId, userId, null, null);
     }
 
     /**

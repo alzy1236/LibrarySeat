@@ -19,8 +19,15 @@ export const studentRooms = (roomType) => request.get('/student/rooms', { params
 export const studentRoomDetail = (roomId) => request.get(`/student/rooms/${roomId}`)
 export const reserveSeat = (seatId) => request.post('/student/reserve', null, { params: { seatId } })
 export const cancelReserve = (reservationId) => request.post('/student/cancel', null, { params: { reservationId } })
-export const checkIn = (reservationId) => request.post('/student/checkin', null, { params: { reservationId } })
-export const checkOut = (reservationId) => request.post('/student/checkout', null, { params: { reservationId } })
+export const checkIn = (reservationId, latitude, longitude) =>
+  request.post('/student/checkin', null, { params: { reservationId, latitude, longitude } })
+export const checkOut = (reservationId, latitude, longitude) =>
+  request.post('/student/checkout', null, { params: { reservationId, latitude, longitude } })
+/** 当前生效的签到点（地理围栏） */
+export const getCheckinLocation = (roomId) =>
+  request.get('/student/checkin-location', { params: { roomId } })
+/** 定位校验是否启用 */
+export const getLocationEnabled = () => request.get('/student/checkin-location/enabled')
 /** 今日预约（含已签退 / 已取消记录） */
 export const getTodayReservation = () => request.get('/student/today')
 /** 今日仍生效的预约（选座占位判断用） */
@@ -89,3 +96,12 @@ export const deleteNotice = (id) => request.delete(`/admin/notices/${id}`)
 
 export const adminConfigs = () => request.get('/admin/configs')
 export const updateConfigs = (data) => request.put('/admin/configs', data)
+
+/* ---------------- 签到点（地理围栏） ---------------- */
+export const adminLocations = (keyword) => request.get('/admin/locations', { params: { keyword } })
+export const addLocation = (data) => request.post('/admin/locations', data)
+export const updateLocation = (data) => request.put('/admin/locations', data)
+export const deleteLocation = (id) => request.delete(`/admin/locations/${id}`)
+export const toggleLocation = (id, enabled) =>
+  request.post(`/admin/locations/${id}/status`, null, { params: { enabled } })
+export const locationRooms = () => request.get('/admin/locations/rooms')

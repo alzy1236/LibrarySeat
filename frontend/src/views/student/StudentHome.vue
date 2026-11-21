@@ -314,9 +314,44 @@ const actionTip = computed(() => {
   return ''
 })
 
+/* ---------------- 定位（签到点围栏） ---------------- */
+const locating = ref(false)
+
+/**
+ * 获取浏览器当前位置（WGS-84）
+ * @returns {Promise<{lat:number, lng:number}|null>} 失败时返回 null（错误已提示）
+ */
+function getPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      ElMessage.error('当前浏览器不支持定位，无法完成操作')
+      return resolve(null)
+    }
+    locating.value = true
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        locating.value = false
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      },
+      (err) => {
+        locating.value = false
+        const msg =
+          err.code === 1
+            ? '定位权限被拒绝，请在浏览器地址栏允许定位后重试'
+            : err.code === 2
+              ? '无法获取位置信息，请检查定位服务或网络'
+              : '定位超时，请到窗边或室外重试'
+        ElMessage.error(msg)
+        resolve(null)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    )
+  })
+}
+
 /* ---------------- 签到 / 签退 ---------------- */
 function onCheckIn() {
-  if (acting.value) return
+  if (acting.value || locating.value) return
   if (!checkInEnabled.value) {
     if (!today.value) {
       ElMessage.warning('今天还没有预约座位，请先预约')
@@ -333,28 +368,35 @@ function onCheckIn() {
     }
     return
   }
-  ElMessageBox.confirm(`将以服务器时间 ${clock.time} 签到，确认吗？`, '签到确认', {
-    type: 'info',
-    confirmButtonText: '确认签到',
-    cancelButtonText: '取消'
-  })
-    .then(async () => {
-      acting.value = true
-      try {
-        const res = await checkIn(today.value.id)
-        today.value = { ...today.value, ...res.data }
-        ElMessage.success(`签到成功：${timeOf(res.data.checkInTime)}`)
-      } catch (e) {
-        loadAll()
-      } finally {
-        acting.value = false
-      }
-    })
-    .catch(() => {})
+  doCheckIn()
+}
+
+async function doCheckIn() {
+  const pos = await getPosition()
+  if (!pos) return
+  try {
+    await ElMessageBox.confirm(
+      `将以服务器时间 ${clock.time} 签到，签到时需要开启定位。确认吗？`,
+      '签到确认',
+      { type: 'info', confirmButtonText: '确认签到', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return
+  }
+  acting.value = true
+  try {
+    const res = await checkIn(today.value.id, pos.lat, pos.lng)
+    today.value = { ...today.value, ...res.data }
+    ElMessage.success(`签到成功：${timeOf(res.data.checkInTime)}`)
+  } catch (e) {
+    loadAll()
+  } finally {
+    acting.value = false
+  }
 }
 
 function onCheckOut() {
-  if (acting.value) return
+  if (acting.value || locating.value) return
   if (!checkOutEnabled.value) {
     if (!today.value) {
       ElMessage.warning('今天还没有预约座位')
@@ -369,26 +411,33 @@ function onCheckOut() {
     }
     return
   }
-  ElMessageBox.confirm(
-    today.value.roomType === 'SHORT'
-      ? '确认签退并离场？请记得带走随身物品。'
-      : '确认签退？签退后才计入本月有效出勤。',
-    '签退确认',
-    { type: 'warning', confirmButtonText: '确认签退', cancelButtonText: '取消' }
-  )
-    .then(async () => {
-      acting.value = true
-      try {
-        const res = await checkOut(today.value.id)
-        today.value = { ...today.value, ...res.data }
-        ElMessage.success(`签退成功：${timeOf(res.data.checkOutTime)}`)
-      } catch (e) {
-        loadAll()
-      } finally {
-        acting.value = false
-      }
-    })
-    .catch(() => {})
+  doCheckOut()
+}
+
+async function doCheckOut() {
+  const pos = await getPosition()
+  if (!pos) return
+  try {
+    await ElMessageBox.confirm(
+      today.value.roomType === 'SHORT'
+        ? '确认签退并离场？请记得带走随身物品。'
+        : '确认签退？签退后才计入本月有效出勤。',
+      '签退确认',
+      { type: 'warning', confirmButtonText: '确认签退', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return
+  }
+  acting.value = true
+  try {
+    const res = await checkOut(today.value.id, pos.lat, pos.lng)
+    today.value = { ...today.value, ...res.data }
+    ElMessage.success(`签退成功：${timeOf(res.data.checkOutTime)}`)
+  } catch (e) {
+    loadAll()
+  } finally {
+    acting.value = false
+  }
 }
 
 /* ---------------- 数据加载 ---------------- */

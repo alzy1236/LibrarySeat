@@ -4,6 +4,8 @@ import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
+// Leaflet 地图样式（必须引入，否则瓦片没有绝对定位，会按普通图片流式排列）
+import 'leaflet/dist/leaflet.css'
 
 import App from './App.vue'
 import router from './router'
