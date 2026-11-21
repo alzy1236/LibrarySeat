@@ -19,7 +19,7 @@
           <li><span class="dot-num">03</span>签到签退以服务器时间为准</li>
         </ul>
 
-        <div class="clock-card">
+        <div class="clock-cardZ">
           <div class="clock-top">
             <span>服务器时间</span>
             <span class="sync" :class="{ off: !clock.wsConnected }">
