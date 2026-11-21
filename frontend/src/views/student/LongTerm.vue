@@ -113,7 +113,6 @@
         </div>
 
         <div class="desk-room">
-          <div class="desk-board">讲 台</div>
           <div v-for="(rowSeats, i) in seatRows" :key="i" class="desk-row">
             <div
               v-for="seat in rowSeats"

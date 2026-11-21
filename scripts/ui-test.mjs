@@ -366,7 +366,10 @@ const run = async () => {
     const seatMapReady = await cdp.waitFor("document.querySelectorAll('.desk').length > 0", 12000)
     const seatCount = await cdp.eval("document.querySelectorAll('.desk').length")
     ok(seatMapReady && seatCount === 24, `第 3 层桌子式座位图渲染 ${seatCount} 个座位`)
-    ok((await cdp.eval("document.querySelector('.desk-board')?.innerText")) === '讲 台', '座位图包含讲台与桌子布局')
+    const hasBoard = await cdp.eval("!!document.querySelector('.desk-board')")
+    ok(!hasBoard, '学生端座位图已去掉讲台')
+    const legendText = await cdp.eval("document.querySelector('.legend-row')?.innerText.replace(/\\s+/g,'') || ''")
+    ok(legendText.includes('已预约'), `图例含「已预约」-> ${legendText}`)
     await cdp.shot('06-student-seatmap')
 
     await navTo('/student/long-term')

@@ -199,6 +199,23 @@
       </div>
     </section>
   </div>
+
+  <!-- 公告详情：一句一行 -->
+  <el-dialog
+    v-model="noticeVisible"
+    :title="noticeTitle"
+    width="520px"
+    class="notice-dialog"
+    top="7vh"
+    append-to-body
+  >
+    <div class="notice-lines">
+      <p v-for="(line, i) in noticeLines" :key="i">{{ line }}</p>
+    </div>
+    <template #footer>
+      <el-button type="primary" @click="noticeVisible = false">知道了</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -220,6 +237,11 @@ const today = ref(null)
 const longTerm = ref({ binding: null, pending: null, requiredDays: 20, calendar: {} })
 const notices = ref([])
 const countdown = reactive({ midnight: 0 })
+
+/* 公告弹窗 */
+const noticeVisible = ref(false)
+const noticeTitle = ref('')
+const noticeLines = ref([])
 
 /* ---------------- 时间工具 ---------------- */
 function computeCountdown() {
@@ -495,7 +517,22 @@ const calendarBlanks = computed(() => {
 })
 
 function showNotice(n) {
-  ElMessageBox.alert(n.content, n.title, { confirmButtonText: '知道了' })
+  noticeTitle.value = n.title || '公告'
+  noticeLines.value = splitSentences(n.content)
+  noticeVisible.value = true
+}
+
+/**
+ * 把公告正文拆成一行一句：
+ * 1. 先按原生换行拆；2. 再按中英文句末标点（。！？；.!?;）拆。
+ */
+function splitSentences(text) {
+  return String(text || '')
+    .replace(/\r/g, '')
+    .split(/\n+/)
+    .flatMap((line) => line.split(/(?<=[。！？；!?;])/))
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 onMounted(loadAll)

@@ -395,9 +395,25 @@ a {
 }
 
 .desk-wait {
-  background: var(--amber-soft);
-  color: var(--amber);
-  border-color: var(--amber-border);
+  /* 已预约：实心，方便一眼区分 */
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.28);
+}
+
+.desk-wait .desk-state {
+  opacity: 1;
+  font-weight: 500;
+}
+
+.desk-wait::before {
+  opacity: 0.45;
+}
+
+.desk-wait:hover {
+  background: #d97706;
+  border-color: #d97706;
 }
 
 .desk-fixed {
@@ -460,6 +476,53 @@ a {
   border-radius: 3px;
   display: inline-block;
   border: 1px solid var(--gray-300);
+}
+
+/* 图例：实心样式与座位保持一致 */
+.desk-legend i.lg-wait {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.desk-legend i.lg-taken {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+/* ---------------- 公告弹窗（每句一行） ---------------- */
+.notice-dialog .el-dialog__body {
+  padding-top: 8px;
+}
+
+.notice-lines {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notice-lines p {
+  position: relative;
+  margin: 0 0 9px;
+  padding-left: 14px;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--gray-700);
+}
+
+.notice-lines p::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: 0.55;
+}
+
+.notice-lines p:last-child {
+  margin-bottom: 0;
 }
 
 /* ---------------- 通用 ---------------- */
