@@ -114,11 +114,30 @@ function goRegister() {
   router.replace('/register')
 }
 
+/**
+ * 预取登录后的页面代码块（与登录请求并行下载）
+ * 账号形如 admin* 视为管理员，其余按学生处理；两个角色的落地页都要先把布局拉下来。
+ */
+function prefetchTargetPage(username) {
+  const name = String(username || '').trim().toLowerCase()
+  const isAdmin = name === 'admin' || name.startsWith('admin')
+  if (isAdmin) {
+    import('@/layouts/AdminLayout.vue').catch(() => {})
+    import('@/views/admin/Dashboard.vue').catch(() => {})
+  } else {
+    import('@/layouts/StudentLayout.vue').catch(() => {})
+    import('@/views/student/StudentHome.vue').catch(() => {})
+  }
+}
+
 async function submit() {
   if (!formRef.value) return
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   loading.value = true
+  // 关键优化：登录请求要走公网（约 1-3 秒），这段时间同时把目标页面的代码块下载下来，
+  // 否则要等登录返回后才开始加载，用户会多等一个整轮网络往返。
+  prefetchTargetPage(form.username)
   try {
     const data = await auth.login({ username: form.username.trim(), password: form.password })
     if (remember.value) {

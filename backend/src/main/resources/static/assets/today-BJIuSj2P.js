@@ -1,1 +1,0 @@
-import{a1 as a,a2 as e}from"./index-DLDLb38K.js";async function r(){try{return(await a()).data||null}catch{return null}}async function s(){try{return(await e()).data||null}catch{return null}}function c(t){return!!t&&(t.status==="WAITING"||t.status==="SEATED")}export{s as a,r as f,c as i};
