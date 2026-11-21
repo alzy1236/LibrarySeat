@@ -70,9 +70,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import EChart from '@/components/EChart.vue'
+// 图表组件异步加载：ECharts 约 400KB，若同步引入会导致进入数据概览时整页等待下载；
+// 异步后页面与数据先渲染，图表随后补上（骨架占位）
+const EChart = defineAsyncComponent(() => import('@/components/EChart.vue'))
 import { adminOverview, adminCharts, adminDistribution, adminRoomTrend } from '@/api'
 
 const COLORS = {
